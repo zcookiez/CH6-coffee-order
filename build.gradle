@@ -1,17 +1,14 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '4.1.0'
-    id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.springframework.boot' version '3.2.5'
+    id 'io.spring.dependency-management' version '1.1.5'
 }
 
-group = 'org.example'
+group = 'com.example'
 version = '0.0.1-SNAPSHOT'
-description = 'commerce-payment'
 
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
+    sourceCompatibility = '17'
 }
 
 configurations {
@@ -25,43 +22,31 @@ repositories {
 }
 
 dependencies {
-    // Spring Boot Starters
+    // 1. Web & Validation
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
-    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
-    compileOnly 'org.projectlombok:lombok'
-    runtimeOnly 'com.mysql:mysql-connector-j'
 
-    // Lombok
+    // 2. Data & JPA
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+    runtimeOnly 'com.h2database:h2' // 로컬 테스트 및 단위 테스트용
+
+    // 3. Redis & Redisson
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.redisson:redisson-spring-boot-starter:3.30.0'
+
+    // 4. Apache Kafka
+    implementation 'org.springframework.kafka:spring-kafka'
+
+    // 5. Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
-    // PortOne Server SDK
-    implementation 'io.portone:server-sdk:0.23.0'
-
-    // Test
+    // 6. Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.security:spring-security-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    testAnnotationProcessor 'org.projectlombok:lombok'
-
-    // 암호화
-    implementation 'at.favre.lib:bcrypt:0.10.2'
-
-    // jwt
-    compileOnly group: 'io.jsonwebtoken', name: 'jjwt-api', version: '0.12.6'
-    runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-impl', version: '0.12.6'
-    runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-jackson', version: '0.12.6'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
-}
-
-// 빌드 시 -plain.jar 파일이 생성되지 않도록 설정
-jar {
-    enabled = false
 }

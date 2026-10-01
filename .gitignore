@@ -1,0 +1,65 @@
+### Build & Gradle ###
+HELP.md
+.gradle
+.gradle-user/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# QueryDSL / Generated sources
+src/main/generated/
+src/test/generated/
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### IDEs ###
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# STS / Eclipse
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# VS Code
+.vscode/
+
+### Secrets & Environment Variables ###
+*.env
+*.env.*
+application-local.yml
+application-local.properties
+application-secret.yml
+application-secret.properties
+
+### Logs ###
+*.log
+logs/
+
+### OS & Temporary Files ###
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+### Local Only ###
+CLAUDE.md

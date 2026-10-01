@@ -1,0 +1,70 @@
+server:
+  port: 8080
+  shutdown: graceful
+
+spring:
+  application:
+    name: coffee-order-system
+
+  # ----------------------------------------------------
+  # 1. RDB  커넥션
+  # ----------------------------------------------------
+  datasource:
+    url: jdbc:mysql://localhost:3306/coffee_order_db?characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+    username: coffee_user
+    password: coffee1234!
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  # ----------------------------------------------------
+  # 2. JPA  설정
+  # ----------------------------------------------------
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+    defer-datasource-initialization: true
+
+
+  # ----------------------------------------------------
+  # 3. Redis & Redisson 인프라 설정
+  # ----------------------------------------------------
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 3000ms
+
+  # ----------------------------------------------------
+  # 4. Apache Kafka 설정 (단일 노드 KRaft 모드)
+  # ----------------------------------------------------
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all                    # 모든 복제본 커밋 확인
+      retries: 3                   # 전송 실패 시 재시도
+      properties:
+        enable.idempotence: true   # 멱등성 프로듀서 (네트워크 재전송 중복 방지)
+    consumer:
+      group-id: coffee-order-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"  # DTO 역직렬화 패키지 허용
+
+# ----------------------------------------------------
+# 5. 로깅 & 쿼리 바인딩 파라미터 추적
+# ----------------------------------------------------
+logging:
+  level:
+    root: INFO
+    com.sparta.coffee: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE  # 쿼리 파라미터 바인딩 값 출력
+    org.springframework.kafka: INFO
