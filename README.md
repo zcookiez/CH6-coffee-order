@@ -1,4 +1,4 @@
-# ☕ Coffee Order System (커피숍 주문 시스템)
+﻿# ☕ Coffee Order System (커피숍 주문 시스템)
 
 ## 1. 프로젝트 개요
 - 프로젝트 목적 및 핵심 요구사항 요약
@@ -6,7 +6,8 @@
 - 실행 및 테스트 방법 (Docker-compose 실행 커맨드, 빌드/테스트 커맨드)
 
 ## 2. 시스템 아키텍처 & ERD
-- ERD (테이블 정의 및 인덱스 설계 이유)
+### ERD 
+<img src="docs/menu_daily_stats.png" alt="ERD" width="600">
 
 ## 3. API 명세서
 ### 공통 응답 규격 (Common Response Format)
@@ -66,7 +67,12 @@
         - `points` 잔액 수정과 `point_histories` 변동 내역 적재를 하나의 트랜잭션으로 묶어 데이터 무결성 보장
     - **입력값 방어 검증**:
         - 0원 이하의 비정상 충전 요청을 `@Positive` 을 통해 컨트롤러 진입 시점에서 원천 차단
+    - **충전 요청 멱등성(Idempotency) 보장**:
+        - `point_histories` 테이블에 클라이언트가 생성한 고유 `charge_request_id`를 `UNIQUE` 컬럼으로 저장하여, 동일한 충전 요청(네트워크 재시도, 더블 클릭 등)이 다시 들어오더라도 DB 레벨에서 중복 충전을 원천 차단
 - **기술적 선택 이유 및 대안 비교**:
+    - **서비스 레이어의 @Transactional 제거 및 분리 설계 이유**:
+        - PointService의 진입 메서드에 @Transactional을 부여하지 않고, 분산 락 획득 후 실행되는 AopForTransaction(REQUIRES_NEW)에 트랜잭션 관리를 전면 위임했습니다.
+        - 상위(Controller 등)에서 트랜잭션을 연 상태로 락을 대기하게 되면 DB 커넥션을 쥐고 있는 채로 시간을 낭비하게 됩니다. 특히 트래픽이 몰릴 때, 이미 커넥션을 차지한 스레드들이 내부의 REQUIRES_NEW를 위해 두 번째 커넥션을 요구하게 되면서 HikariCP 커넥션 풀 고갈 및 교착 상태(Deadlock)가 발생하는 치명적인 장애를 원천 차단하기 위한 아키텍처적 결단입니다.
     - **DB 비관적 락(`SELECT FOR UPDATE`) 대신 Redis 분산 락(Redisson)을 선택한 이유**:
         - 비관적 락은 트랜잭션이 시작되는 순간부터 DB 커넥션을 점유한 채 대기하므로, 동시 요청 급증 시 커넥션 풀(HikariCP) 고갈로 전체 시스템 장애가 전파될 위험이 있음. 대기 스레드가 DB 커넥션을 점유하지 않도록 Redis 레벨에서 먼저 동시 요청 순서를 제어하고, 락을 획득한 스레드만 실제 쿼리 수행 시점에 커넥션을 쓰도록 분리해 HikariCP 고갈을 방지.
     - **기본 클라이언트(Lettuce) 대신 Redisson을 분산 락 구현체로 선택한 이유**:
