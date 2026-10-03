@@ -1,9 +1,7 @@
 # ☕ Coffee Order System (커피숍 주문 시스템)
 
 ## 1. 프로젝트 개요
-
-### 🎯 프로젝트 목적
-본 프로젝트는 **대규모 트래픽과 동시성 이슈를 안전하게 처리할 수 있는 고가용성(High Availability) 커피 주문 시스템**을 구축하는 것을 목표로 합니다. 
+본 프로젝트는 **대규모 트래픽과 동시성 이슈를 안전하게 처리할 수 있는 고가용성(High Availability) 커피 주문 시스템**을 구축하는 것을 목표로 합니다.
 
 ### 🛠 실행 환경 (Tech Stack)
 - **Language**: Java 17
@@ -13,7 +11,7 @@
 - **Messaging**: Apache Kafka (이벤트 비동기 전송)
 - **Build Tool**: Gradle
 
-### 🚀 실행 및 테스트 방법
+### 🚀 인프라 실행 및 모니터링 접속 정보
 * **인프라 구동 (Redis, Kafka)**
    ```bash
    docker-compose up -d
@@ -21,7 +19,6 @@
 * 🖥 **인프라 모니터링 UI 접속 정보**:
   * **Kafka UI**: [http://localhost:8088](http://localhost:8088)
   * **RedisInsight**: [http://localhost:5540](http://localhost:5540)
-
 
 ## 2. 시스템 아키텍처 & ERD
 ### ERD 
@@ -46,6 +43,16 @@
 | 포인트 충전 | POST | /api/points/charge | 사용자 포인트 충전 (1원 = 1P) |
 | 커피 주문/결제 | POST | /api/orders | 커피 주문, 포인트 차감 결제 및 데이터 플랫폼 전송 |
 | 인기 메뉴 조회 | GET | /api/menus/popular | 최근 7일간 주문 수량 기준 Top 3 메뉴 조회 |
+
+### 실시간 API 명세서 (Swagger OpenAPI)
+본 프로젝트는 코드 빌드(`generateOpenApiDocs`) 시 서버 구동 없이 정적 명세서(`docs/openapi.yaml`)를 자동 추출하도록 자동화되어 있습니다.
+서버를 띄우지 않아도 아래 링크를 클릭하시면 웹상에서 명세서를 확인할 수 있습니다!
+👉 **[Coffee Order System API 문서 보기 (Swagger Editor)](https://editor.swagger.io/?url=https://raw.githubusercontent.com/zcookiez/CH6-coffee-order/main/docs/openapi.yaml)**
+
+*(💡 팁: 로컬 서버가 켜져 있을 때는 `http://localhost:8080/swagger-ui/index.html` 에서 직접 테스트(Try it out)가 가능합니다.)*
+
+## 4. 설계 의도 및 기술적 문제 해결 전략
+본 섹션에서는 각 기능 구현 시 고민했던 **설계의 의도**, **선택한 문제 해결 전략 및 분석 내용**, 그리고 그에 따른 **기술적 선택 이유**를 상세히 다룹니다.
 
 ### 4.1 커피 메뉴 목록 조회 API
 - **문제 인식**:

@@ -2,6 +2,14 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.2.5'
     id 'io.spring.dependency-management' version '1.1.5'
+    id "org.springdoc.openapi-gradle-plugin" version "1.8.0"
+}
+
+openApi {
+    apiDocsUrl.set("http://localhost:8080/v3/api-docs.yaml")
+    outputDir.set(file("$projectDir/docs")) // docs 폴더에 파일 생성
+    outputFileName.set("openapi.yaml")
+    waitTimeInSeconds.set(10) // 서버가 뜰 때까지 기다리는 시간
 }
 
 group = 'com.example'
@@ -38,15 +46,23 @@ dependencies {
     // 4. Apache Kafka
     implementation 'org.springframework.kafka:spring-kafka'
 
-    // 5. Lombok
+    // 5. Swagger (Springdoc OpenAPI)
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
+
+    // 6. Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
-    // 6. Test
+    // 7. Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
 }
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// Gradle 8.x + springdoc plugin 호환성 문제 해결을 위한 설정
+tasks.matching { it.name == "forkedSpringBootRun" }.configureEach {
+    doNotTrackState("springdoc-openapi-gradle-plugin workingDir issue workaround")
 }
