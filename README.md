@@ -1,9 +1,27 @@
-﻿# ☕ Coffee Order System (커피숍 주문 시스템)
+# ☕ Coffee Order System (커피숍 주문 시스템)
 
 ## 1. 프로젝트 개요
-- 프로젝트 목적 및 핵심 요구사항 요약
-- 실행 환경 (Java 버전, Spring Boot 버전, DB, 인프라 등)
-- 실행 및 테스트 방법 (Docker-compose 실행 커맨드, 빌드/테스트 커맨드)
+
+### 🎯 프로젝트 목적
+본 프로젝트는 **대규모 트래픽과 동시성 이슈를 안전하게 처리할 수 있는 고가용성(High Availability) 커피 주문 시스템**을 구축하는 것을 목표로 합니다. 
+
+### 🛠 실행 환경 (Tech Stack)
+- **Language**: Java 17
+- **Framework**: Spring Boot 3.x, Spring Data JPA
+- **Database**: MySQL 8.x (운영), H2 (테스트용 인메모리)
+- **Cache & Concurrency**: Redis (Lettuce), Redisson (분산 락)
+- **Messaging**: Apache Kafka (이벤트 비동기 전송)
+- **Build Tool**: Gradle
+
+### 🚀 실행 및 테스트 방법
+* **인프라 구동 (Redis, Kafka)**
+   ```bash
+   docker-compose up -d
+   ```
+* 🖥 **인프라 모니터링 UI 접속 정보**:
+  * **Kafka UI**: [http://localhost:8088](http://localhost:8088)
+  * **RedisInsight**: [http://localhost:5540](http://localhost:5540)
+
 
 ## 2. 시스템 아키텍처 & ERD
 ### ERD 
@@ -56,6 +74,7 @@
 ---
 
 ### 4.2 포인트 충전 API
+🧪 **관련 테스트 코드**: [PointServiceConcurrencyTest.java](src/test/java/com/sparta/coffee/domain/point/service/PointServiceConcurrencyTest.java)
 - **문제 인식**:
     - 사용자의 연속 더블 클릭이나 네트워크 재전송으로 인해 동일 유저의 충전 요청이 동시에 들어올 경우 갱신 손실(Lost Update) 발생 위험
     - 잔액 수정과 충전 로그(이력) 적재 간의 데이터 불일치 방지 필요
@@ -82,6 +101,7 @@
 ---
 
 ### 4.3 커피 주문 및 결제 API
+🧪 **관련 테스트 코드**: [OrderServiceConcurrencyTest.java](src/test/java/com/sparta/coffee/domain/order/service/OrderServiceConcurrencyTest.java)
 - **문제 인식**:
     - 한 유저가 주문 버튼을 연속 클릭하거나 충전과 결제를 동시에 시도할 때 포인트 갱신 손실(Lost Update) 및 잔액 음수화 위험
     - 다수의 유저가 남은 재고가 1개인 동일 메뉴를 동시에 주문할 경우, 유저 락만으로는 방어가 불가능하여 초과 판매(Overselling) 발생 위험
@@ -108,20 +128,23 @@
 ---
 
 ### 4.4 인기 커피 메뉴 목록 조회 API (최근 7일 기준 상위 3개)
+🧪 **관련 테스트 코드**: [PopularMenuIntegrationTest.java](src/test/java/com/sparta/coffee/domain/menu/service/PopularMenuIntegrationTest.java) / [CacheFallbackIntegrationTest.java](src/test/java/com/sparta/coffee/domain/menu/service/CacheFallbackIntegrationTest.java)
 - **문제 인식**:
     - 최근 7일간의 최다 주문 메뉴를 조회할 때, 수십~수백만 건에 달하는 대용량 주문(`order_items`)을 매번 직접 `GROUP BY` 및 `SUM`으로 집계하면 심각한 DB I/O 병목 및 지연 발생
-    - 대량의 통계 데이터를 Redis 메모리에만 전적으로 의존할 경우 서버 재부팅 시 데이터 유실 위험이 있으며, 히스토리성 시계열 데이터 분석이 불가능함
+    - 대량의 통계 데이터를 Redis 메모리에만 전적으로 의존할 경우 서버 재부팅 시 데이터 유실 위험이 있음.
 - **해결 전략**:
     - **일별 집계 테이블(`menu_daily_stats`)을 통한 집계 부하 경감**:
         - 주문 원장을 직접 뒤지지 않고, 일자별·메뉴별 판매량을 사전 요약한 `menu_daily_stats` 테이블 구축
         - 7일간의 데이터를 조회하더라도 탐색 범위가 "메뉴 개수 × 7일(수백 건)"로 제한되어 DB 쿼리 비용을 수천 배 이상 절감
+        - Spring Event 비동기 분리**: 통계 업데이트 중 에러가 나더라도 고객의 결제(핵심 로직)가 취소되는 불상사를 막기 위해, 스프링 비동기 이벤트(`@Async`, `AFTER_COMMIT`)로 결합도를 완전히 끊었습니다. (※ 데이터 수집 플랫폼으로 쏘는 Kafka 로직과는 완전히 분리된 내부망 전용 이벤트입니다)
+        - Native UPSERT 쿼리 적용**: 수많은 유저가 동시에 같은 메뉴를 주문할 때 JPA 예외(`DataIntegrityViolationException`)가 발생하면 트랜잭션 전체가 롤백(Rollback-Only)되어버리는 치명적 함정을 피하기 위해, 어설픈 예외 처리 대신 MySQL의 `ON DUPLICATE KEY UPDATE` 네이티브 쿼리를 도입해 원자적으로 카운트를 누적시킵니다.
     - **Redis 캐싱을 통한 서브 밀리초 응답 서빙**:
-        - 매일 자정 스케줄러가 전날 원장을 일별 테이블에 `INSERT`한 직후, 최근 7일치 데이터를 합산하여 Top 3 랭킹을 Redis 키(`popular:menus:top3`)에 선제 적재(Cache Warming)
+        - 매일 자정 스케줄러가 `menu_daily_stats` 테이블에서 최근 7일 치 데이터를 합산하여 Top 3 랭킹을 추출한 뒤, Redis 키(`popular:menus:top3`)에 선제 적재(Cache Warming)
         - 사용자 요청 시 RDB 접근을 완전히 차단하고 인메모리에서 초고속으로 결과 반환
     - **안정적인 장애 격리 (Fallback 구조)**:
         - Redis 장애 발생 시, 가벼운 `menu_daily_stats` 집계 쿼리로 즉시 우회(Fallback)하도록 설계하여 서비스 중단 방지
 - **기술적 선택 이유 및 대안 비교**:
-    - **주문 시점 실시간 Redis 카운팅(`ZINCRBY`) 대신 일별 집계 테이블 + 배치 캐싱을 선택한 이유**:
+    - **주문 시점 실시간 Redis 카운팅(`ZINCRBY`) 대신 일별 집계 + 스케줄러 캐싱을 선택한 이유**:
         - 실시간 Sorted Set을 쓰면 "오늘 주문"은 쉽게 카운팅되지만, "정확히 7일 전 데이터만 골라서 차감(슬라이딩 윈도우)"하는 로직이 매우 복잡해지고 데이터 오차가 누적될 수 있음. 반면 일별 통계 테이블을 기반으로 매일 자정에 최근 7일치를 새로 계산해 캐싱하는 방식은 데이터 정합성이 100% 보장되며 구현 안정성이 훨씬 뛰어남.
     - **실시간 API 호출 집계 대신 스케줄러 Cache Warming을 선택한 이유**:
         - 조회 빈도가 높은 랭킹 데이터를 실시간 집계하면 특정 사용자 요청에 집계 지연 시간이 전가됨. 스케줄러를 통해 트래픽이 적은 새벽 시간대에 미리 결과를 계산해 캐시에 넣어둠으로써 모든 사용자가 균일하게 서브 밀리초(sub-millisecond) 응답을 받도록 보장함.

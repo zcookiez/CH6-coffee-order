@@ -1,7 +1,11 @@
 package com.sparta.coffee.global.config.cache;
 
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -15,14 +19,10 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Spring Cache(@Cacheable 등)를 Redis와 연동하기 위한 설정 클래스입니다.
- * - CacheManager를 RedisCacheManager로 등록하여 기본 캐시 저장소를 Redis로 지정합니다.
- * - 캐시 키(CacheNames)별로 만료 시간(TTL)이나 직렬화 방식 등 세부 옵션을 설정합니다.
- */
+@Slf4j
 @EnableCaching
 @Configuration
-public class RedisCacheConfig {
+public class RedisCacheConfig implements CachingConfigurer {
 
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
@@ -42,5 +42,34 @@ public class RedisCacheConfig {
                 .cacheDefaults(defaultConfig)
                 .withInitialCacheConfigurations(configurations)
                 .build();
+    }
+
+    /**
+     * Redis 장애 시 어플리케이션 전체 장애로 번지지 않고, 
+     * 원본 메서드(DB 직접 조회)를 실행하게 만드는 진짜 Fallback 안전망
+     */
+    @Override
+    public CacheErrorHandler errorHandler() {
+        return new CacheErrorHandler() {
+            @Override
+            public void handleCacheGetError(RuntimeException exception, Cache cache, Object key) {
+                log.warn("Redis GET 에러 발생! 캐시 우회(Fallback)하여 원본 DB 메서드를 실행합니다. Cache: {}, Key: {}", cache.getName(), key, exception);
+            }
+
+            @Override
+            public void handleCachePutError(RuntimeException exception, Cache cache, Object key, Object value) {
+                log.warn("Redis PUT 에러 발생! Cache: {}, Key: {}", cache.getName(), key, exception);
+            }
+
+            @Override
+            public void handleCacheEvictError(RuntimeException exception, Cache cache, Object key) {
+                log.warn("Redis EVICT 에러 발생! Cache: {}, Key: {}", cache.getName(), key, exception);
+            }
+
+            @Override
+            public void handleCacheClearError(RuntimeException exception, Cache cache) {
+                log.warn("Redis CLEAR 에러 발생! Cache: {}", cache.getName(), exception);
+            }
+        };
     }
 }

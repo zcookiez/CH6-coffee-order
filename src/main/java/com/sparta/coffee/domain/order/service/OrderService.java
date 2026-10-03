@@ -2,6 +2,7 @@ package com.sparta.coffee.domain.order.service;
 
 import com.sparta.coffee.domain.menu.entity.Menu;
 import com.sparta.coffee.domain.menu.repository.MenuRepository;
+import com.sparta.coffee.domain.menu.service.MenuService;
 import com.sparta.coffee.domain.order.dto.OrderRequest;
 import com.sparta.coffee.domain.order.dto.OrderResponse;
 import com.sparta.coffee.domain.order.entity.Order;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Service
@@ -29,7 +31,7 @@ public class OrderService {
     private final ApplicationEventPublisher eventPublisher;
 
     /**
-     * 커피 주문 및 결제 핵심 로직
+     * 커피 주문
      */
     @DistributedLock(key = "'lock:user:' + #request.userId()")
     public OrderResponse createOrder(OrderRequest request) {
@@ -49,7 +51,6 @@ public class OrderService {
         }
 
         // 4. 포인트 차감
-        // UUID는 36자이므로 DB 컬럼(length=36)에 딱 맞습니다. ("PAY-" 접두사를 빼서 길이 초과 방지)
         String transactionId = UUID.randomUUID().toString();
         pointService.usePoint(request.userId(), totalPrice, transactionId);
 
@@ -69,8 +70,9 @@ public class OrderService {
         order.addOrderItem(orderItem);
         orderRepository.save(order);
 
-        // 6. Kafka 발행을 위한 사내 애플리케이션 이벤트 발행 (트랜잭션 커밋 후 동작하도록 설계)
-        eventPublisher.publishEvent(new OrderCompletedEvent(request.userId(), request.menuId(), order.getTotalPrice()));
+        // 6. Kafka 발행 및 통계 누적을 위한 사내 애플리케이션 이벤트 발행
+        // (트랜잭션 커밋 후 비동기로 분리되어 통계 실패가 결제를 롤백시키지 않음)
+        eventPublisher.publishEvent(new OrderCompletedEvent(request.userId(), request.menuId(), request.quantity(), order.getTotalPrice()));
 
         return OrderResponse.from(order);
     }

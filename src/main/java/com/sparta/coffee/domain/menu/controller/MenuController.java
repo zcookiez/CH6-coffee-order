@@ -22,4 +22,10 @@ public class MenuController {
         List<MenuResponse> menus = menuService.getAllMenus();
         return CommonResponse.success(menus);
     }
+
+    @GetMapping("/popular")
+    public CommonResponse<List<MenuResponse>> getPopularMenus() {
+        List<MenuResponse> popularMenus = menuService.getPopularMenus();
+        return CommonResponse.success(popularMenus);
+    }
 }
