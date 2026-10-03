@@ -2,7 +2,6 @@ package com.sparta.coffee.domain.order.service;
 
 import com.sparta.coffee.domain.menu.entity.Menu;
 import com.sparta.coffee.domain.menu.repository.MenuRepository;
-import com.sparta.coffee.domain.menu.service.MenuService;
 import com.sparta.coffee.domain.order.dto.OrderRequest;
 import com.sparta.coffee.domain.order.dto.OrderResponse;
 import com.sparta.coffee.domain.order.entity.Order;
@@ -17,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.UUID;
 
 @Service
