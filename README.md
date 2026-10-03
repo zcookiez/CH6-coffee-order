@@ -47,9 +47,10 @@
 ### 실시간 API 명세서 (Swagger OpenAPI)
 본 프로젝트는 코드 빌드(`generateOpenApiDocs`) 시 서버 구동 없이 정적 명세서(`docs/openapi.yaml`)를 자동 추출하도록 자동화되어 있습니다.
 서버를 띄우지 않아도 아래 링크를 클릭하시면 웹상에서 명세서를 확인할 수 있습니다!
+
 👉 **[Coffee Order System API 문서 보기 (Swagger Editor)](https://editor.swagger.io/?url=https://raw.githubusercontent.com/zcookiez/CH6-coffee-order/main/docs/openapi.yaml)**
 
-*(💡 팁: 로컬 서버가 켜져 있을 때는 `http://localhost:8080/swagger-ui/index.html` 에서 직접 테스트(Try it out)가 가능합니다.)*
+*(💡 팁: 로컬 서버가 켜져 있을 때는 `http://localhost:8080/swagger-ui/index.html` 에서 직접 테스트가 가능합니다.)*
 
 ## 4. 설계 의도 및 기술적 문제 해결 전략
 본 섹션에서는 각 기능 구현 시 고민했던 **설계의 의도**, **선택한 문제 해결 전략 및 분석 내용**, 그리고 그에 따른 **기술적 선택 이유**를 상세히 다룹니다.
