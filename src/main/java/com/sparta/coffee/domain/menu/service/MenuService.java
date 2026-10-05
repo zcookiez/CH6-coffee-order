@@ -5,6 +5,7 @@ import com.sparta.coffee.domain.menu.repository.MenuDailyStatsRepository;
 import com.sparta.coffee.domain.menu.repository.MenuRepository;
 import com.sparta.coffee.global.config.cache.CacheNames;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,7 +49,7 @@ public class MenuService {
      * DB에서 통계를 계산한 뒤 결과를 Redis에 덮어씌웁니다.
      */
     @Transactional(readOnly = true)
-    @org.springframework.cache.annotation.CachePut(cacheNames = CacheNames.POPULAR_MENUS, key = "'top3'")
+    @CachePut(cacheNames = CacheNames.POPULAR_MENUS, key = "'top3'")
     public List<MenuResponse> warmUpPopularMenusCache() {
         return calculateTop3PopularMenus();
     }
